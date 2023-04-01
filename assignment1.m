@@ -24,7 +24,7 @@ for i=1:n
 end
 spatialExtent = [minCoord, maxCoord];
 
-% (2) [2 marks] Create dataset D% which adds an MBR column for the polygon 
+% (2) [2 marks] Create dataset D' which adds an MBR column for the polygon 
 %     in each record in D. Output the spreadsheet file for the new dataset 
 %     D.
 mbrs = zeros(n, 4);
@@ -42,16 +42,15 @@ writetable(D, './output/T1.2.xlsx');
 
 % (3) [2 marks] Let n be the resolution for recursive decomposition of the 
 %     space as defined by the spatial extent of D. What are the sizes (in 
-%     cm by cm) of the smallest Peano cells for n = 16, 23 and 28 
+%     cm by cm) of the smallest Peano cells for n = 12, 16 and 20 
 %     respectively? Show your calculation steps. Please also discuss which 
 %     resolution value is suitable for D.
 
-% Calculate the real distance between 
-%   (latitude 1, longitude 1), (latitude 2, longitude 2)
+% Calculate the real distance between the base of D
 spatialExtentGeoSize = getSpatialExtentGeoSize(spatialExtent, unit);
 fprintf("The size of the MBR: %f km x %f km\n", ...
     spatialExtentGeoSize(1) / 100000, spatialExtentGeoSize(2) / 100000);
-resolutions = [16, 23, 28];
+resolutions = [12, 16, 20];
 for i=1:length(resolutions)
     resolution = resolutions(i);
     peanoCellGeoSize = getPeanoCellGeoSize(spatialExtent, resolution, unit);
@@ -62,11 +61,11 @@ end
 
 %% Task 2 [10 marks] (z-value indexing)
 % (1) [6 mark] Write a program to generate the base-5 z-value for each 
-%     polygon, for n = 16, 23 and 28 respectively. We use only one z-value 
+%     polygon, for n = 12, 16 and 20 respectively. We use only one z-value 
 %     for each object based on its MBR. Add three columns of z-values to D 
 %     for these three different resolution levels. Output the spreadsheet 
 %     file with the new columns.
-resolutions = [16, 23, 28];
+resolutions = [12, 16, 20];
 for i=1:length(resolutions)
     resolution = resolutions(i);
     peanoCellGeoSize = getPeanoCellGeoSize(spatialExtent, resolution, unit);
@@ -109,6 +108,7 @@ for i=1:length(resolutions)
     end
     D.("zVals (n = " + string(resolution) + ")") = zVals;
 end
+writetable(D, './output/T2.1.xlsx');
 
 % (2) [4 marks] For each object, compare the sizes of the Peano cells for 
 %     the same object using the above 3 resolution numbers and analyze your 
@@ -142,6 +142,7 @@ for i=1:length(resolutions)
     D.("Peano cells width (n = " + string(resolution) + ") m") = realWidths;
     D.("Peano cells height (n = " + string(resolution) + ") m") = realHeights;
 end
+writetable(D, './output/T2.2.xlsx');
 
 %% Task 3 [10 marks] (window query processing)
 % A window query with a given query rectangle represented as 
@@ -161,8 +162,8 @@ windowQueryTable = D(:, {'id'});
 windowQueryTable.mbrs = mbrs;
 ids = runWindowQuery(query, windowQueryTable);
 
-% With Z-Value indexing
-resolution = 28;
+% With z-value
+resolution = 20;
 windowQueryWithZValueTable = D(:, {'id'});
 windowQueryWithZValueTable.mbrs = mbrs;
 windowQueryWithZValueTable.zVals = D.("zVals (n = " + string(resolution) + ")");
@@ -183,8 +184,50 @@ idsZVal = runWindowQueryWithZValue(query, minZVal, maxZVal, windowQueryWithZValu
 %     (ii) the number of objects searched for each query for using no 
 %     z-values (i.e., exhaustive search) and using z-values obtained using 
 %     different resolution numbers.
-for queryId=1:20000
-    queryId
+% Generate random queries
+numRandQueries = 20;
+queries = zeros(numRandQueries, 4);
+for queryId=1:numRandQueries
+    randCoords = rand(2, 2);
+    randMinCoord = min(randCoords);
+    randMaxCoord = max(randCoords);
+    query = [((maxCoord(1) - minCoord(1)) * randMinCoord(1)) + minCoord(1), ...
+             ((maxCoord(2) - minCoord(2)) * randMinCoord(2)) + minCoord(2), ...
+             ((maxCoord(1) - minCoord(1)) * randMaxCoord(1)) + minCoord(1), ...
+             ((maxCoord(2) - minCoord(2)) * randMaxCoord(2)) + minCoord(2)];
+    queries(queryId, :) = query;
+end
+for i=1:length(resolutions)
+    resolution = resolutions(i);
+    fprintf("\nCurrent resolution: n = %d\n", resolution);
+    for queryId=1:numRandQueries
+        query = queries(queryId, :);
+        fprintf("(%f, %f), (%f, %f) & ", query(1), query(2), query(3), query(4));
+        % Run window query with exhaustive search
+        [ids, qryStat] = runWindowQuery(query, windowQueryTable);
+        fprintf("%d & %d & ", length(ids), qryStat.compareCount);
+    
+        peanoCellGeoSize = getPeanoCellGeoSize(spatialExtent, resolution, unit);
+        queryMinCoord = getCoordinateOnGrid(query(1:2), minCoord, peanoCellGeoSize, unit);
+        queryMaxCoord = getCoordinateOnGrid(query(3:4), minCoord, peanoCellGeoSize, unit);
+        minZVal = zValueBase5(resolution, queryMinCoord);
+        maxZVal = zValueBase5(resolution, queryMaxCoord);
+        minZVal = padString(longestCommonPrefix(minZVal, maxZVal), resolution, '0');
+        
+        % Run window query with z-values
+        [idsZVal, qryStatZVal] = runWindowQueryWithZValue(query, minZVal, maxZVal, windowQueryWithZValueTable);
+        fprintf("%d \\\\\n", qryStatZVal.compareCount);
+    
+        assert(length(ids) == length(idsZVal));
+    end
+end
+
+
+%% Tests
+% Ensure the correctness of the windows query with z-value by large using
+% a large number of random tests
+parfor queryId=1:20000
+    fprintf("Current query id: %d\n", queryId);
     randCoords = rand(2, 2);
     randMinCoord = min(randCoords);
     randMaxCoord = max(randCoords);

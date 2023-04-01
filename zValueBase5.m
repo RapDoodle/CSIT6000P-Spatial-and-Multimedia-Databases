@@ -27,7 +27,6 @@ while n > 0
     end
     z(m - n + 1) = curr;
     n = n - 1;
-
 end
 z = char(z);
 end

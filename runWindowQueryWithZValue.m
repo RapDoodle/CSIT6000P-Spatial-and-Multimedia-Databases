@@ -16,6 +16,7 @@ while lo <= hi
         lo = mid + 1;
     end
 end
+compareCount = 0;
 ids = [];
 if startIdx ~= -1
     for i=lo:n
@@ -26,7 +27,9 @@ if startIdx ~= -1
         if all(currMbr(1:2) >= query(1:2)) && all(currMbr(3:4) <= query(3:4))
             ids(end+1) = data{i, 'id'};
         end
+        compareCount = compareCount + 1;
     end
 end
+stats.compareCount = compareCount;
 end
 
