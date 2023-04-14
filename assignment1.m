@@ -80,29 +80,14 @@ for i=1:length(resolutions)
         bottomRight = mbr([3, 2]);
 
         % Get the coordinate on grid
-        topLeftCoor = getCoordinateOnGrid(topLeft, minCoord, ...
-            peanoCellGeoSize, unit);
         topRightCoor = getCoordinateOnGrid(topRight, minCoord, ...
             peanoCellGeoSize, unit);
         bottomLeftCoor = getCoordinateOnGrid(bottomLeft, minCoord, ...
             peanoCellGeoSize, unit);
-        bottomRightCoor = getCoordinateOnGrid(bottomRight, minCoord, ...
-            peanoCellGeoSize, unit);
 
-        assert(all(topLeftCoor >= 1));
-        assert(all(topLeftCoor <= 2^resolution));
-        assert(all(topRightCoor >= 1));
-        assert(all(topRightCoor <= 2^resolution));
-        assert(all(bottomLeftCoor >= 1));
-        assert(all(bottomLeftCoor <= 2^resolution));
-        assert(all(bottomRightCoor >= 1));
-        assert(all(bottomRightCoor <= 2^resolution));
-
-        topLeftZVal = zValueBase5(resolution, topLeftCoor);
         topRightZVal = zValueBase5(resolution, topRightCoor);
         bottomLeftZVal = zValueBase5(resolution, bottomLeftCoor);
-        bottomRightZVal = zValueBase5(resolution, bottomRightCoor);
-        zVal = longestCommonPrefix(topLeftZVal, topRightZVal, bottomLeftZVal, bottomRightZVal);
+        zVal = longestCommonPrefix(bottomLeftZVal, topRightZVal);
         zVal = padString(zVal, resolution, '0');
         zVals{j} = zVal;
     end
