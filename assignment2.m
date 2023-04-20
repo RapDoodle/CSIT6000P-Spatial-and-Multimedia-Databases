@@ -3,6 +3,11 @@
 addpath('data');
 [D, geometries] = loadDataset('./data/Buildings.xlsx');
 
+% Start parallel pool
+parfor i=1:1
+    disp('Successfully started parallel pool.');
+end
+
 %% Task 0 [0 marks] Dataset preprocessing
 % Calculate the spatial extend
 n = height(D);
@@ -112,20 +117,18 @@ for queryId=1:length(queries)
     end
 
     % Display statistics for search with R-tree
-    fprintf(" %d & %d & %.2f s\n", length(rTreeSearchRes), qryStat.compareCount, mean(expResults));
+    fprintf(" %d & %d & %.2f s \\\\\n", length(rTreeSearchRes), qryStat.compareCount, mean(expResults));
 end
 
 %% Tests
 % Ensure the correctness of the windows query with R-tree
 testQueries = getRandomQueries(10000, spatialExtent);
 m = length(testQueries);
-f = waitbar(0);
-for i=1:m
-    waitbar(i/n, f, sprintf('Running test (%d / %d)', i, m));
-    query = queries(queryId, :);
+parfor queryId=1:m
+    fprintf("Current query id: %d\n", queryId);
+    query = testQueries(queryId, :);
     exhaustiveSearchRes = runWindowQuery(query, windowQueryTable);
     rTreeSearchRes = rtree3.windowQuery(query);
     assert(length(exhaustiveSearchRes) == length(rTreeSearchRes));
 end
-close(f);
 
