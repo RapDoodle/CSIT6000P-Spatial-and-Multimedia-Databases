@@ -1,4 +1,12 @@
-function [ids, stats] = runWindowQueryWithZValue(query, minZVal, maxZVal, data)
+function [ids, stats] = runWindowQueryWithZValue(query, data, spatialExtent, resolution, unit)
+
+peanoCellGeoSize = getPeanoCellGeoSize(spatialExtent, resolution, unit);
+queryMinCoord = getCoordinateOnGrid(query(1:2), spatialExtent(1:2), peanoCellGeoSize, unit);
+queryMaxCoord = getCoordinateOnGrid(query(3:4), spatialExtent(1:2), peanoCellGeoSize, unit);
+minZVal = zValueBase5(resolution, queryMinCoord);
+maxZVal = zValueBase5(resolution, queryMaxCoord);
+minZVal = padString(longestCommonPrefix(minZVal, maxZVal), resolution, '0');
+
 minZVal = string(minZVal);
 maxZVal = string(maxZVal);
 zVals = string(data{:, 'zVals'});

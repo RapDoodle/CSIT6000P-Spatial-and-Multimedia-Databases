@@ -16,26 +16,17 @@ unit = 'cm';
 %     The spatial extent of D is the MBR of all polygons in D. Report the 
 %     MBR of D.
 n = height(D);
-minCoord = ones(1, 2) * double(intmax("int32"));
-maxCoord = ones(1, 2) * double(intmin("int32"));
-for i=1:n
-    minCoord = min([geometries{i}; minCoord]);
-    maxCoord = max([geometries{i}; maxCoord]);
-end
-spatialExtent = [minCoord, maxCoord];
+spatialExtent = getSpatialExtent(geometries);
 
 % (2) [2 marks] Create dataset D' which adds an MBR column for the polygon 
 %     in each record in D. Output the spreadsheet file for the new dataset 
 %     D.
-mbrs = zeros(n, 4);
+mbrs = getMBRs(geometries);
 mbrStrs = cell(n, 1);
-parfor i=1:n
-    currMinCord = min(geometries{i});
-    currMaxCord = max(geometries{i});
-    mbrs(i, :) = [currMinCord(1), currMinCord(2), ...
-                  currMaxCord(1), currMaxCord(2)];
+for i=1:n
+    mbr = mbrs(i, :);
     mbrStrs{i} = sprintf('RECTANGLE (%.7f, %.7f, %.7f, %.7f)', ...
-        currMinCord(1), currMinCord(2), currMaxCord(1), currMaxCord(2));
+        mbr(1), mbr(2), mbr(3), mbr(4));
 end
 D.MBR = mbrStrs;
 writetable(D, './output/T1.2.xlsx');
@@ -74,15 +65,13 @@ for i=1:length(resolutions)
         mbr = mbrs(j, :);
 
         % Find the four vertex of the MBR
-        topLeft = mbr([1, 4]);
         topRight = mbr([3, 4]);
         bottomLeft = mbr([1, 2]);
-        bottomRight = mbr([3, 2]);
 
         % Get the coordinate on grid
-        topRightCoor = getCoordinateOnGrid(topRight, minCoord, ...
+        topRightCoor = getCoordinateOnGrid(topRight, spatialExtent(1:2), ...
             peanoCellGeoSize, unit);
-        bottomLeftCoor = getCoordinateOnGrid(bottomLeft, minCoord, ...
+        bottomLeftCoor = getCoordinateOnGrid(bottomLeft, spatialExtent(1:2), ...
             peanoCellGeoSize, unit);
 
         topRightZVal = zValueBase5(resolution, topRightCoor);
@@ -137,10 +126,7 @@ writetable(D, './output/T2.2.xlsx');
 %     approaches: (i) by exhaustively checking every object in the dataset; 
 %     and (ii) by using z-values you generate in Task 2 for the above three 
 %     n values.
-query = [((maxCoord(1) - minCoord(1)) * 0.25) + minCoord(1), ...
-         ((maxCoord(2) - minCoord(2)) * 0.25) + minCoord(2), ...
-         ((maxCoord(1) - minCoord(1)) * 0.75) + minCoord(1), ...
-         ((maxCoord(2) - minCoord(2)) * 0.75) + minCoord(2)];
+query = getRandomQueries(1, spatialExtent);
 
 % Exhaustive search
 windowQueryTable = D(:, {'id'});
@@ -154,14 +140,7 @@ windowQueryWithZValueTable.mbrs = mbrs;
 windowQueryWithZValueTable.zVals = D.("zVals (n = " + string(resolution) + ")");
 windowQueryWithZValueTable = sortrows(windowQueryWithZValueTable, 'zVals');
 
-peanoCellGeoSize = getPeanoCellGeoSize(spatialExtent, resolution, unit);
-queryMinCoord = getCoordinateOnGrid(query(1:2), minCoord, peanoCellGeoSize, unit);
-queryMaxCoord = getCoordinateOnGrid(query(3:4), minCoord, peanoCellGeoSize, unit);
-minZVal = zValueBase5(resolution, queryMinCoord);
-maxZVal = zValueBase5(resolution, queryMaxCoord);
-minZVal = padString(longestCommonPrefix(minZVal, maxZVal), resolution, '0');
-
-idsZVal = runWindowQueryWithZValue(query, minZVal, maxZVal, windowQueryWithZValueTable);
+idsZVal = runWindowQueryWithZValue(query, windowQueryWithZValueTable, spatialExtent, resolution, unit);
 
 % (2) [3 mark] Use 20 randomly generated window queries of different sizes 
 %     at different locations to search using the programs you developed 
@@ -171,38 +150,22 @@ idsZVal = runWindowQueryWithZValue(query, minZVal, maxZVal, windowQueryWithZValu
 %     different resolution numbers.
 % Generate random queries
 numRandQueries = 20;
-queries = zeros(numRandQueries, 4);
-for queryId=1:numRandQueries
-    randCoords = rand(2, 2);
-    randMinCoord = min(randCoords);
-    randMaxCoord = max(randCoords);
-    query = [((maxCoord(1) - minCoord(1)) * randMinCoord(1)) + minCoord(1), ...
-             ((maxCoord(2) - minCoord(2)) * randMinCoord(2)) + minCoord(2), ...
-             ((maxCoord(1) - minCoord(1)) * randMaxCoord(1)) + minCoord(1), ...
-             ((maxCoord(2) - minCoord(2)) * randMaxCoord(2)) + minCoord(2)];
-    queries(queryId, :) = query;
-end
+queries = getRandomQueries(numRandQueries, spatialExtent);
 for i=1:length(resolutions)
     resolution = resolutions(i);
     fprintf("\nCurrent resolution: n = %d\n", resolution);
     for queryId=1:numRandQueries
         query = queries(queryId, :);
         fprintf("(%f, %f), (%f, %f) & ", query(1), query(2), query(3), query(4));
+
         % Run window query with exhaustive search
         [ids, qryStat] = runWindowQuery(query, windowQueryTable);
         fprintf("%d & %d & ", length(ids), qryStat.compareCount);
-    
-        peanoCellGeoSize = getPeanoCellGeoSize(spatialExtent, resolution, unit);
-        queryMinCoord = getCoordinateOnGrid(query(1:2), minCoord, peanoCellGeoSize, unit);
-        queryMaxCoord = getCoordinateOnGrid(query(3:4), minCoord, peanoCellGeoSize, unit);
-        minZVal = zValueBase5(resolution, queryMinCoord);
-        maxZVal = zValueBase5(resolution, queryMaxCoord);
-        minZVal = padString(longestCommonPrefix(minZVal, maxZVal), resolution, '0');
-        
+
         % Run window query with z-values
-        [idsZVal, qryStatZVal] = runWindowQueryWithZValue(query, minZVal, maxZVal, windowQueryWithZValueTable);
+        [idsZVal, qryStatZVal] = runWindowQueryWithZValue(query, windowQueryWithZValueTable, spatialExtent, resolution, unit);
         fprintf("%d \\\\\n", qryStatZVal.compareCount);
-    
+
         assert(length(ids) == length(idsZVal));
     end
 end
@@ -211,26 +174,18 @@ end
 %% Tests
 % Ensure the correctness of the windows query with z-value by large using
 % a large number of random tests
-parfor queryId=1:20000
+numTestQueries = 20000;
+testQueries = getRandomQueries(numTestQueries, spatialExtent);
+m = length(testQueries);
+parfor queryId=1:numTestQueries
     fprintf("Current query id: %d\n", queryId);
-    randCoords = rand(2, 2);
-    randMinCoord = min(randCoords);
-    randMaxCoord = max(randCoords);
-    query = [((maxCoord(1) - minCoord(1)) * randMinCoord(1)) + minCoord(1), ...
-             ((maxCoord(2) - minCoord(2)) * randMinCoord(2)) + minCoord(2), ...
-             ((maxCoord(1) - minCoord(1)) * randMaxCoord(1)) + minCoord(1), ...
-             ((maxCoord(2) - minCoord(2)) * randMaxCoord(2)) + minCoord(2)];
+    query = testQueries(queryId, :);
+    
+    % Run window query with exhaustive search
+    [ids, qryStat] = runWindowQuery(query, windowQueryTable);
 
-    ids = runWindowQuery(query, windowQueryTable);
-
-    peanoCellGeoSize = getPeanoCellGeoSize(spatialExtent, resolution, unit);
-    queryMinCoord = getCoordinateOnGrid(query(1:2), minCoord, peanoCellGeoSize, unit);
-    queryMaxCoord = getCoordinateOnGrid(query(3:4), minCoord, peanoCellGeoSize, unit);
-    minZVal = zValueBase5(resolution, queryMinCoord);
-    maxZVal = zValueBase5(resolution, queryMaxCoord);
-    minZVal = padString(longestCommonPrefix(minZVal, maxZVal), resolution, '0');
-
-    idsZVal = runWindowQueryWithZValue(query, minZVal, maxZVal, windowQueryWithZValueTable);
+    % Run window query with z-values
+    [idsZVal, qryStatZVal] = runWindowQueryWithZValue(query, windowQueryWithZValueTable, spatialExtent, resolution, unit);
 
     assert(length(ids) == length(idsZVal));
 end
