@@ -1,9 +1,9 @@
 classdef RTreeNode < handle
     properties
-        entries; % Array of RTreeNodeEntry objects
-        isLeaf; % Boolean indicating if the node is a leaf node
-        parent; % Parent node (RTreeNode)
-        level; % Level of the node in the RTree
+        entries;    % Array of RTreeNodeEntry objects
+        isLeaf;     % Boolean indicating if the node is a leaf node
+        parent;     % Parent node (RTreeNode)
+        level;      % Level of the node in the RTree
     end
 
     methods

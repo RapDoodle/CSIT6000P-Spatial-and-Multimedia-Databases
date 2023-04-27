@@ -1,7 +1,6 @@
 %% Bootstrap
-% Load dataset
+% Add data path
 addpath('data');
-[D, geometries] = loadDataset('./data/Buildings.xlsx');
 
 % Start parallel pool
 parfor i=1:1
@@ -9,6 +8,10 @@ parfor i=1:1
 end
 
 %% Task 0 [0 marks] Dataset preprocessing
+% Load dataset
+
+[D, geometries] = loadDataset('./data/Buildings.xlsx');
+
 % Calculate the spatial extend
 n = height(D);
 spatialExtent = getSpatialExtent(geometries);
@@ -42,20 +45,20 @@ mbrs = getMBRs(geometries);
 %     b. [1 mark] the numbers of non-leaf and leaf nodes.
 % Create an R-tree for the first half of D
 tic
-rtree1 = RTree(64, 32, 256);
+rtree1 = RTree(8, 64);
 rtree1.build(mbrs(1:n/2, :), geometries(1:n/2, :), true);
 rtree1.summary(true);
 
-rtree2 = RTree(8, 4, 32);
+rtree2 = RTree(32, 256);
 rtree2.build(mbrs(1:n/2, :), geometries(1:n/2, :), true);
 rtree2.summary(true);
 
 % Create an R-tree for the entire D
-rtree3 = RTree(64, 32, 256);
+rtree3 = RTree(8, 64);
 rtree3.build(mbrs, geometries, true);
 rtree3.summary(true);
 
-rtree4 = RTree(8, 4, 32);
+rtree4 = RTree(32, 256);
 rtree4.build(mbrs, geometries, true);
 rtree4.summary(true);
 toc
@@ -80,6 +83,10 @@ toc
 %        algorithms (you % should run your algorithms multiple times for 
 %        each query and report the min/max/avg time).
 %     c. [1 mark] The number of polygons in D that have been checked.
+rtree = RTree(8, 256);
+rtree.build(mbrs, geometries, true);
+rtree.summary(true);
+
 queries = getRandomQueries(30, spatialExtent);
 experiments = 10;
 
@@ -110,7 +117,7 @@ for queryId=1:length(queries)
     % With R-tree
     for expCnt=1:experiments
         startTime = tic;
-        [rTreeSearchRes, qryStat] = rtree3.windowQuery(query);
+        [rTreeSearchRes, qryStat] = rtree.windowQuery(query);
         assert(length(exhaustiveSearchRes) == length(rTreeSearchRes));
         elapsed = toc(startTime);
         expResults(1, expCnt) = elapsed;
@@ -128,7 +135,7 @@ parfor queryId=1:m
     fprintf("Current query id: %d\n", queryId);
     query = testQueries(queryId, :);
     exhaustiveSearchRes = runWindowQuery(query, windowQueryTable);
-    rTreeSearchRes = rtree3.windowQuery(query);
+    rTreeSearchRes = rtree.windowQuery(query);
     assert(length(exhaustiveSearchRes) == length(rTreeSearchRes));
 end
 

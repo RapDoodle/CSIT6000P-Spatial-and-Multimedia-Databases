@@ -1,8 +1,8 @@
 classdef RTreeNodeEntry < handle 
     properties
         id;
-        mbr; % Format: [minX, minY, maxX, maxY]
-        child; % Should be an RTreeNode object or an MBR
+        mbr;    % Format: [minX, minY, maxX, maxY]
+        child;  % Should be an RTreeNode object or an MBR
     end
     
     methods
