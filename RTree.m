@@ -82,11 +82,11 @@ classdef RTree < handle
                 if node.isLeaf == 1
                     leafCnt = leafCnt + 1;
                 else
+                    nonLeafCnt = nonLeafCnt + 1;
                     for i=1:length(node.entries)
                         % Non-leaf node
                         entry = node.entries{i};
                         queue.push(entry.child);
-                        nonLeafCnt = nonLeafCnt + 1;
                     end
                 end
             end
@@ -114,11 +114,9 @@ classdef RTree < handle
                     if RTree.calculateOverlap(entry.mbr, searchMbr) > 0
                         if isa(entry.child, 'RTreeNode')
                             queue.push(entry.child);
-                        else
-                            if all(entry.mbr(1:2) >= searchMbr(1:2)) && ...
+                        elseif all(entry.mbr(1:2) >= searchMbr(1:2)) && ...
                                     all(entry.mbr(3:4) <= searchMbr(3:4))
-                                entries{end+1} = entry;
-                            end
+                            entries{end+1} = entry;
                         end
                     end
                 end
