@@ -43,22 +43,53 @@ mbrs = getMBRs(geometries);
 %     total of 4 cases for the first half of D and then for the entire D):
 %     a. [1 mark] the height of your R-tree index.
 %     b. [1 mark] the numbers of non-leaf and leaf nodes.
-% Create an R-tree for the first half of D
+% Split the dataset by half
+mbrsHavlved = mbrs(1:n/2, :);
+geometriesHavled = geometries(1:n/2, :);
+
+% Create R-trees
 tic
-rtree1 = RTree(8, 64);
-rtree1.build(mbrs(1:n/2, :), geometries(1:n/2, :), true);
+d = 8;
+n = 64;
+fprintf("d = %d, n = %d\n", d, n);
+rtree1Halved = RTree(d, n);
+rtree1Halved.build(mbrsHavlved, geometriesHavled, true);
+rtree1Halved.summary(true);
+
+rtree1 = RTree(d, n);
+rtree1.build(mbrs, geometries, true);
 rtree1.summary(true);
 
-rtree2 = RTree(32, 256);
-rtree2.build(mbrs(1:n/2, :), geometries(1:n/2, :), true);
+d = 8;
+n = 256;
+fprintf("d = %d, n = %d\n", d, n);
+rtree2Halved = RTree(d, n);
+rtree2Halved.build(mbrsHavlved, geometriesHavled, true);
+rtree2Halved.summary(true);
+
+rtree2 = RTree(d, n);
+rtree2.build(mbrs, geometries, true);
 rtree2.summary(true);
 
-% Create an R-tree for the entire D
-rtree3 = RTree(8, 64);
+d = 32;
+n = 64;
+fprintf("d = %d, n = %d\n", d, n);
+rtree3Halved = RTree(d, n);
+rtree3Halved.build(mbrsHavlved, geometriesHavled, true);
+rtree3Halved.summary(true);
+
+rtree3 = RTree(d, n);
 rtree3.build(mbrs, geometries, true);
 rtree3.summary(true);
 
-rtree4 = RTree(32, 256);
+d = 32;
+n = 256;
+fprintf("d = %d, n = %d\n", d, n);
+rtree4Halved = RTree(d, n);
+rtree4Halved.build(mbrsHavlved, geometriesHavled, true);
+rtree4Halved.summary(true);
+
+rtree4 = RTree(d, n);
 rtree4.build(mbrs, geometries, true);
 rtree4.summary(true);
 toc
