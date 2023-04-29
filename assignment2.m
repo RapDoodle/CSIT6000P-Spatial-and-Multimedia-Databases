@@ -9,7 +9,6 @@ end
 
 %% Task 0 [0 marks] Dataset preprocessing
 % Load dataset
-
 [D, geometries] = loadDataset('./data/Buildings.xlsx');
 
 % Calculate the spatial extend
@@ -143,7 +142,8 @@ for queryId=1:length(queries)
     end
 
     % Display statistics for exhaustive search
-    fprintf("%d & %d & %.2f s &", length(exhaustiveSearchRes), qryStat.compareCount, mean(expResults));
+    fprintf("%d & %d & %.2f/%.2f/%.2f s &", length(exhaustiveSearchRes), ...
+        qryStat.compareCount, min(expResults), max(expResults), mean(expResults));
     
     % With R-tree
     for expCnt=1:experiments
@@ -155,7 +155,8 @@ for queryId=1:length(queries)
     end
 
     % Display statistics for search with R-tree
-    fprintf(" %d & %d & %.2f s \\\\\n", length(rTreeSearchRes), qryStat.compareCount, mean(expResults));
+    fprintf(" %d & %d & %.2f/%.2f/%.2f s \\\\\n", length(rTreeSearchRes), ...
+        qryStat.compareCount, min(expResults), max(expResults), mean(expResults));
 end
 
 %% Tests
